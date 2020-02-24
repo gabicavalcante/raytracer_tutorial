@@ -6,6 +6,18 @@
 
 #include <iostream>
 
+// we pick a random point in the unit cube where x, y, and z all range from −1 to +1
+// we reject this point and try again if the point is outside the sphere
+vec3 random_in_unit_sphere()
+{
+    vec3 p;
+    do
+    {
+        p = 2.0 * vec3(random_double(), random_double(), random_double()) - vec3(1, 1, 1);
+    } while (p.squared_length() >= 1.0);
+    return p;
+}
+
 float hit_sphere(const vec3 &center, float radius, const ray &r)
 {
     vec3 oc = r.origin() - center;
@@ -23,16 +35,15 @@ float hit_sphere(const vec3 &center, float radius, const ray &r)
     }
 }
 
-// blends white and blue depending on the up/downess of the y coordinate 
+// blends white and blue depending on the up/downess of the y coordinate
 // linear_interpolation: blendedValue = (1 - t) * startValue + t * endValue
 vec3 color(const ray &r, hittable *world)
 {
     hit_record rec;
-    if (world->hit(r, 0.0, MAXFLOAT, rec))
+    if (world->hit(r, 0.001, MAXFLOAT, rec))
     {
-        // normal is in the direction of the hitpoint minus the center
-        // map x/y/z to r/g/b
-        return 0.5 * vec3(rec.normal.x() + 1, rec.normal.y() + 1, rec.normal.z() + 1);
+        vec3 target = rec.p + rec.normal + random_in_unit_sphere();
+        return 0.5 * color(ray(rec.p, target - rec.p), world);
     }
     else
     {
@@ -68,7 +79,9 @@ int main()
                 ray r = cam.get_ray(u, v);
                 col += color(r, world);
             }
+
             col /= float(ns);
+            col = vec3(sqrt(col[0]), sqrt(col[1]), sqrt(col[2]));
 
             int ir = int(255.99 * col[0]);
             int ig = int(255.99 * col[1]);
